@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Conversión a Binario</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous">
+</head>
+<body>
+    <p class="h2">Representación interna de números de punto flotante IEEE 754</p>
+
+    <form class="form-floating" id="numberForm">
+        <input type="number" class="form-control" id="numero" name="numero" step="0.01" required placeholder="15.7">
+        <label for="floatingInputValue">Ingresa un número real</label>
+        <div class="d-grid gap-2 col-6 mx-auto">
+            <button class="btn btn-dark" type="button" onclick="procesarNumero()">Convertir</button>
+        </div>
+    </form>
+
+    <div class="output" id="output"></div>
+
+    <script>
+        document.getElementById("numero").addEventListener("keydown", function(event) {
+            if (event.key === "Enter") {
+                event.preventDefault(); // Evita que el formulario se envíe al presionar Enter
+                procesarNumero();
+            }
+        });
+
+        function convertirEnteroABinario(numero) {
+            let valor = Math.floor(numero);
+            let resultadoBinario = '';
+            let filas = '';
+
+            while (valor > 0) {
+                let divisor = 2;
+                let cociente = Math.floor(valor / divisor);
+                let residuo = valor % divisor;
+
+                filas += `
+                    <tr>
+                        <td>${valor}</td>
+                        <td>${divisor}</td>
+                        <td>${cociente}</td>
+                        <td>${residuo}</td>
+                    </tr>
+                `;
+
+                resultadoBinario = residuo + resultadoBinario;
+                valor = cociente;
+            }
+
+            const tabla = `
+                <div class="container">
+                <div class="col col-md-12 col-sm-12 col-lg-6">
+                    <p class="h3">Parte Entera</p>
+                    <table class="table table-dark table-hover">
+                        <tr>
+                            <th>Valor</th>
+                            <th>Divisor</th>
+                            <th>Cociente</th>
+                            <th>Residuo</th>
+                        </tr>
+                        ${filas}
+                        <tr class="result">
+                            <td colspan="4">${resultadoBinario || 0}</td>
+                        </tr>
+                    </table>
+                </div>
+            `;
+
+            return { tabla, resultadoBinario };
+        }
+
+        function convertirFraccionABinario(fraccion, bitsRestantes) {
+            let valor = fraccion;
+            let multiplicador = 2;
+            let filas = '';
+            let digito;
+            let contadorBitsFraccion = 0;
+            let fraccionBinaria = '';
+
+            while (contadorBitsFraccion < bitsRestantes && valor > 0) {
+                const producto = valor * multiplicador;
+                digito = Math.floor(producto);
+
+                filas += `
+                    <tr>
+                        <td>${valor.toFixed(17)}</td>
+                        <td>${multiplicador}</td>
+                        <td>${producto.toFixed(17)}</td>
+                        <td>${digito}</td>
+                    </tr>
+                `;
+
+                valor = producto - digito;
+                fraccionBinaria += digito;
+                contadorBitsFraccion++;
+            }
+
+            const tablaFraccion = `
+            <div class="col col-md-12 col-sm-12 col-lg-6">
+                <p class="h3">Parte Fraccionaria</p>
+                <table class="table table-success table-hover">
+                    <tr>
+                        <th>Valor</th>
+                        <th>Multiplicador</th>
+                        <th>Producto</th>
+                        <th>Dígito</th>
+                    </tr>
+                    ${filas}
+                    <tr class="result">
+                    </tr>
+                </table>
+            </div>
+            `;
+
+            return { tablaFraccion, fraccionBinaria };
+        }
+
+        function crearTablaIEEE754(signo, exponente, fraccionCompleta) {
+            let filas = '';
+
+            filas += `
+                <tr>
+                    <td>${signo === 1 ? 'Negativo' : 'Positivo'}</td>
+                    <td>${exponente + 127}</td>
+                    <td>${fraccionCompleta.slice(0, 24)}</td>
+                </tr>
+            `;
+
+            filas += `
+                <tr>
+                    <td>${signo === 1 ? 0 : 1}</td>
+                    <td>${(exponente + 127).toString(2)}</td>
+                    <td>${fraccionCompleta.slice(1, 24)}</td>
+                </tr>
+            `;
+
+            filas += `
+                <tr>
+                    <td colspan="3"></td>
+                </tr>
+            `;
+
+            const tablaIEEE754 = `
+            <div class="col col-md-12 col-sm-12 col-lg-6">
+                <table class="table table-info table-hover">
+                    <tr>
+                        <th>Signo</th>
+                        <th>Exponente + 127</th>
+                        <th>Fracción</th>
+                    </tr>
+                    ${filas}
+                </table>
+            </div>
+        </div>
+            `;
+
+            return tablaIEEE754;
+        }
+
+        function procesarNumero() {
+            const numero = parseFloat(document.getElementById("numero").value);
+            const outputDiv = document.getElementById("output");
+
+            if (isNaN(numero)) {
+                outputDiv.innerHTML = "<p>Por favor ingresa un número válido.</p>";
+                return;
+            }
+
+            const signo = numero < 0 ? 1 : 0;
+            const parteEntera = Math.floor(Math.abs(numero));
+            const parteFraccionaria = Math.abs(numero) - parteEntera;
+            const { tabla: tablaBinario, resultadoBinario } = convertirEnteroABinario(parteEntera);
+            const bitsEnteros = resultadoBinario.length;
+            const bitsRestantes = 24 - bitsEnteros;
+            const { tablaFraccion, fraccionBinaria } = convertirFraccionABinario(parteFraccionaria, bitsRestantes);
+            const exponente = bitsEnteros - 1;
+            const fraccionCompleta = resultadoBinario + fraccionBinaria;
+            const tablaIEEE754 = crearTablaIEEE754(signo, exponente, fraccionCompleta);
+            outputDiv.innerHTML = tablaBinario + tablaFraccion + tablaIEEE754;
+        }
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz" crossorigin="anonymous"></script>
+</body>
+</html>
